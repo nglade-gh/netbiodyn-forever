@@ -1,0 +1,17 @@
+#!/bin/sh
+# Refuse tout push vers une branche qui n'est pas celle de ce dépôt.
+# Endless Bloom et NetBioDyn Forever sont deux dépôts distincts ; chacun ne
+# publie que sa branche main. Ce crochet empêche qu'un push maladroit envoie le
+# contenu d'un projet sur une branche de l'autre.
+ALLOWED="main"
+status=0
+while read local_ref local_sha remote_ref remote_sha; do
+    branch=$(echo "$remote_ref" | sed 's|^refs/heads/||')
+    if [ "$branch" = "$ALLOWED" ]; then
+        echo "pre-push : $branch autorisé"
+    else
+        echo "pre-push : REFUS — ce dépôt ne pousse que $ALLOWED, pas $branch" >&2
+        status=1
+    fi
+done
+exit $status
