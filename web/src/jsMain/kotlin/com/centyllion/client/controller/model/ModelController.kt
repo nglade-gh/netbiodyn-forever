@@ -1,6 +1,9 @@
 package com.centyllion.client.controller.model
 
 import bulma.*
+import kotlinx.browser.document
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLLabelElement
 import com.centyllion.client.controller.utils.SearchController
 import com.centyllion.client.controller.utils.filtered
 import com.centyllion.client.download
@@ -19,6 +22,8 @@ import kotlin.properties.Delegates.observable
 
 /** True when [element] (by uuid) is part of this model. */
 private fun GrainModel.holds(element: ModelElement): Boolean = when (element) {
+    // the modifiers were forgotten here: any edit closed their editor
+    is SimulationModifier -> modifiers.any { it.uuid == element.uuid }
     is Grain -> grains.any { it.uuid == element.uuid }
     is Behaviour -> behaviours.any { it.uuid == element.uuid }
     is Field -> fields.any { it.uuid == element.uuid }
@@ -102,8 +107,8 @@ class ModelController(
 
     /** Applies the expert mode to the current editor (graphical predicates already handled). */
     private fun applyExpertMode(value: Boolean) {
-        showModifiers(value)
         refreshFieldPanels()
+        showModifiers(value)
         when (val c = editorController) {
             is BehaviourEditController -> c.expertMode = value
             is GrainEditController -> c.expertMode = value
@@ -181,6 +186,8 @@ class ModelController(
         if (oldSelection != newSelection) {
             editorController = when (newSelection) {
                 is Field -> FieldEditController(newSelection, data.model, page) { _, new, _ ->
+                    // the editor owns its fields, not the identifier: start again from the
+                    // instance really present in the model instead of overwriting it
                     val current = data.model.fields.firstOrNull { it.uuid == new.uuid }
                     if (current != null) data = data.updateField(current, new.copy(id = current.id))
                 }
@@ -191,6 +198,8 @@ class ModelController(
                 }
 
                 is Behaviour -> BehaviourEditController(newSelection, data.model, page, expertMode) { _, new, _ ->
+                    // enabled and id belong to the model: the explorer radio, Activate and
+                    // Inactivate may change them while the editor is open
                     val current = data.model.behaviours.firstOrNull { it.uuid == new.uuid }
                     if (current != null) {
                         data = data.updateBehaviour(current, new.copy(id = current.id, enabled = current.enabled))
@@ -198,6 +207,7 @@ class ModelController(
                 }
 
                 is SimulationModifier -> ModifierEditController(newSelection, data.model, page) { _, new, _ ->
+                    // same rule: the editor never writes enabled nor id back
                     val current = data.model.modifiers.firstOrNull { it.uuid == new.uuid }
                     val merged = if (current != null) new.copy(id = current.id, enabled = current.enabled) else new
                     data = data.copy(model = data.model.updateModifier(current ?: new, merged))
@@ -332,7 +342,7 @@ class ModelController(
             initialList = data.model.fields,
             onClick = { field, _ -> selected = field },
             controllerBuilder = { field, previous ->
-                previous ?: FieldDisplayController(field).wrap { controller ->
+                previous ?: FieldDisplayController(field, page).wrap { controller ->
                     controller.onDelete = {
                         data = data.dropField(controller.data)
                         selected = null
@@ -383,9 +393,6 @@ class ModelController(
         )
     }
 
-    val grainsHeader = sectionHeader(grainIcon, "Grains", grainsController, addGrainButton)
-    val behavioursHeader = sectionHeader(behaviourIcon, "Behaviours", behavioursController, addBehaviourButton)
-
     val addModifierButton = iconButton(Icon("plus"), ElementColor.Primary, true, size = Size.Small) {
         val modifier = data.model.newModifier(page.i18n("Modifier"))
         this.data = data.copy(model = data.model.copy(modifiers = data.model.modifiers + modifier))
@@ -414,8 +421,10 @@ class ModelController(
             }
         }
 
+    // same section header as the grains, the fields and the behaviours (collapsible chevron)
     val modifiersHeader = sectionHeader("sliders-h", "Simulation modifiers", modifiersController, addModifierButton)
 
+    // the modifiers only make sense in expert mode
     private fun showModifiers(visible: Boolean) {
         modifiersHeader.hidden = !visible
         modifiersController.hidden = !visible
@@ -424,6 +433,9 @@ class ModelController(
     init {
         showModifiers(expertMode)
     }
+
+    val grainsHeader = sectionHeader(grainIcon, "Grains", grainsController, addGrainButton)
+    val behavioursHeader = sectionHeader(behaviourIcon, "Behaviours", behavioursController, addBehaviourButton)
     val fieldsHeader = sectionHeader(fieldIcon, "Fields", fieldsController, addFieldButton)
 
     val leftColumn = Column(
@@ -475,6 +487,18 @@ class ModelController(
         },
         onUpdate = { old, new, _ -> if (old != new) data = data.copy(simulation = new) }
     )
+
+    /**
+     * A Show(id) / Hide(id) meta-action changes page.appContext.hiddenGrainIds (or
+     * hiddenFieldIds) from the simulation loop: the explorer switches did not see the event
+     * that changed them, so they are told to re-read the sets, otherwise they keep a stale state.
+     */
+    init {
+        simulationController.simulationViewController.onVisibilityChanged = {
+            grainsController.dataControllers.forEach { it.refresh() }
+            fieldsController.dataControllers.forEach { it.refresh() }
+        }
+    }
 
 
     val emptyEditor = SubTitle(page.i18n("Select a element to edit it"))
