@@ -136,7 +136,8 @@ fun createEvaluator(simulator: Simulator) = NetbioDynEvaluator(simulator)
 fun createEvaluator() = NetbioDynEvaluator(null)
 
 /** Positive modulo: wraps [v] into [0, n) — toroidal coordinates (see [com.centyllion.model.Simulation.moveIndex]). */
-private fun wrapCoordinate(v: Int, n: Int): Int = ((v % n) + n) % n
+/** Wraps [v] into 0 until [n]; a non-positive [n] has no wrapping to do. */
+fun wrapCoordinate(v: Int, n: Int): Int = if (n <= 0) 0 else ((v % n) + n) % n
 
 fun validateFormula(formula: String): String? {
     val evaluator = createEvaluator()

@@ -2,6 +2,7 @@ package com.centyllion.client.controller.model
 
 import bulma.*
 import bulma.Field
+import bulma.extension.Switch
 import com.centyllion.client.page.BulmaPage
 import com.centyllion.model.*
 import kotlinx.browser.document
@@ -13,8 +14,6 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.Path2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLInputElement
-import org.w3c.dom.HTMLLabelElement
 import org.w3c.dom.ImageData
 import org.w3c.dom.Node
 import org.w3c.dom.events.Event
@@ -39,8 +38,10 @@ import kotlin.random.Random
  *
  * Interactions are the same as before (pen, line, square, spray, eraser, move
  * to pan, zoom with the wheel, fullscreen, thumbnails), plus a rectangle
- * selection (shift + drag) that can be copied, cut, pasted and transformed with the edit
- * toolbar or Ctrl+C / Ctrl+X / Ctrl+V.
+ * selection (shift + drag) that can be copied, cut, pasted, erased and transformed with the edit
+ * toolbar or Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+Delete / Ctrl+R / Ctrl+F / Ctrl+Shift+F. A copy
+ * waits for its paste as a preview: it floats under the mouse until a left click anchors it on a
+ * cell (a right click detaches it).
  */
 class SimulatorViewController(
     simulator: Simulator, val page: BulmaPage, readOnly: Boolean = true,
@@ -507,6 +508,11 @@ class SimulatorViewController(
             // Shift + left button: rectangle selection, never a drawing action
             if (evt.shiftKey && evt.button.toInt() == 0) {
                 beginSelection(evt)
+            } else if (previewActive() && evt.button.toInt() == 0) {
+                // a left click while a copy waits for its paste anchors it on the cell under
+                // the pointer (the place a paste will land) instead of drawing on the grid;
+                // Escape gives the click back to the drawing tools
+                anchorAt(evt)
             } else if (selectedTool == EditTool.Move) {
                 panning = true
                 panX = evt.clientX.toDouble()
@@ -607,12 +613,15 @@ class SimulatorViewController(
             render()
         })
 
-        // right click inside the selection drops it; the canvas has no native menu anyway
+        // right click on the canvas detaches the anchored copy (the preview floats again);
+        // otherwise, inside the selection, it drops the selection. The canvas has no native menu.
         display.addEventListener("contextmenu", { event ->
             val evt = event as MouseEvent
-            val rect = selection
-            if (rect != null) {
-                cellAt(evt)?.let { (x, y) -> if (rect.contains(x, y)) clearSelection() }
+            if (!detachAnchor()) {
+                val rect = selection
+                if (rect != null) {
+                    cellAt(evt)?.let { (x, y) -> if (rect.contains(x, y)) clearSelection() }
+                }
             }
             evt.preventDefault()
         })
@@ -747,12 +756,72 @@ class SimulatorViewController(
      */
     private var clipboardPasted = false
 
-    /** True when the "Écraser" radio is active: a paste then replaces the visible agents. */
+    /**
+     * Cell where the pending copy is anchored, null while it floats under the mouse.
+     *
+     * The floating preview follows the pointer; a left click on the canvas anchors it to the
+     * cell under the pointer, so the copy stops moving and the frame marks the exact place a
+     * paste will write to. A right click on the canvas detaches it (it floats again) and a new
+     * copy, a cut, an erase, a paste or [clearSelection] drops it.
+     */
+    private var anchor: Pair<Int, Int>? = null
+
+    /** True while a copy or a cut waits for its paste: the preview is then shown. */
+    private fun previewActive(): Boolean = clipboard != null && !clipboardPasted && !readOnly
+
+    /** Anchors the pending copy on the cell under the mouse: the preview stops following it. */
+    private fun anchorAt(evt: MouseEvent): Boolean {
+        val cell = cellAt(evt) ?: return false
+        anchor = cell
+        hoverX = cell.first
+        hoverY = cell.second
+        render()
+        return true
+    }
+
+    /** Detaches the anchored copy: the preview follows the mouse again. */
+    private fun detachAnchor(): Boolean {
+        if (anchor == null) return false
+        anchor = null
+        render()
+        return true
+    }
+
+    /**
+     * Drops the pending preview and its anchor (Escape) without touching the clipboard, so the
+     * drawing tools get the left click back: a copy that waits for its paste always anchors on
+     * a click, hence this way out.
+     */
+    private fun dismissPreview(): Boolean {
+        if (!previewActive() && anchor == null) return false
+        clipboardPasted = true
+        anchor = null
+        render()
+        return true
+    }
+
+    /** True when the "Écraser" switch is active: a paste then replaces the visible agents. */
     var overwriteOnPaste: Boolean = false
         set(value) {
             if (field == value) return
             field = value
             refreshEditButtons()
+        }
+
+    /**
+     * True when the "Torique ?" switch is active: a paste that overflows the grid continues on
+     * the opposite side (coordinates wrapped modulo the width and the height, like the edges
+     * of the simulation) instead of losing the cells that fall outside.
+     *
+     * It applies to the manual paste and to the `Paste`/`PasteAndFlush` meta-actions, which
+     * both go through [pasteAt].
+     */
+    var toricPaste: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            // the preview of the extraction shows the wrapped cells: repaint it
+            render()
         }
 
     private fun ensureColors() {
@@ -823,12 +892,18 @@ class SimulatorViewController(
         render()
     }
 
-    /** Drops the selection (the "Désélectionner" button and the right click inside it). */
-    fun clearSelection() {
-        if (selection == null) return
+    /**
+     * Drops the selection and the anchor (the "Désélectionner" button, Ctrl+Shift+S and the
+     * right click inside the selection). Returns true when something was dropped.
+     */
+    fun clearSelection(): Boolean {
+        val changed = selection != null || anchor != null
         selection = null
+        anchor = null
+        if (!changed) return false
         refreshEditButtons()
         render()
+        return true
     }
 
     /**
@@ -883,29 +958,48 @@ class SimulatorViewController(
      * of the extraction - especially after a rotation or a flip - is visible before pasting.
      * It is drawn by [render], so it follows the mouse, never flickers and adds no listener.
      * It only exists while a copy or a cut waits for its paste: see [clipboardPasted].
+     *
+     * When the extraction is anchored ([anchor]), the frame stays on its cell whatever the
+     * pointer does and is drawn thicker and plain yellow over a dark outline, instead of the
+     * thin cool frame of the floating mode: the two states cannot be mistaken.
      */
     private fun drawPastePreview(ctx: CanvasRenderingContext2D) {
         val cells = clipboard ?: return
         if (clipboardPasted || readOnly || selecting) return
-        // hoverX/hoverY are -1 as soon as the pointer leaves the canvas: the frame disappears
-        if (hoverX < 0 || hoverY < 0) return
-        if (!data.simulation.positionInside(hoverX, hoverY)) return
-        val left = offsetX + hoverX * cellScale
-        val top = offsetY + hoverY * cellScale
+        val anchored = anchor
+        val originX: Int
+        val originY: Int
+        if (anchored != null) {
+            // an anchored frame outlives the pointer: it is drawn even when it leaves the canvas
+            if (!data.simulation.positionInside(anchored.first, anchored.second)) return
+            originX = anchored.first
+            originY = anchored.second
+        } else {
+            // hoverX/hoverY are -1 as soon as the pointer leaves the canvas: the frame disappears
+            if (hoverX < 0 || hoverY < 0) return
+            if (!data.simulation.positionInside(hoverX, hoverY)) return
+            originX = hoverX
+            originY = hoverY
+        }
+        val left = offsetX + originX * cellScale
+        val top = offsetY + originY * cellScale
         val width = clipboardWidth * cellScale
         val height = clipboardHeight * cellScale
         ctx.save()
 
         // content of the extraction first: one translucent square per memorised cell, empty
         // cells stay transparent; cells outside the grid are skipped, as the paste ignores them
+        // (or wrapped on the opposite side, as the paste does, when the toric switch is on)
         ensureColors()
         val simulation = data.simulation
         ctx.globalAlpha = 0.3
         for (row in 0 until clipboardHeight) {
-            val y = hoverY + row
-            if (!simulation.positionInside(hoverX, y)) continue
+            val pastedY = originY + row
+            val y = if (toricPaste) wrapCoordinate(pastedY, simulation.height) else pastedY
+            if (!simulation.positionInside(originX, y)) continue
             for (column in 0 until clipboardWidth) {
-                val x = hoverX + column
+                val pastedX = originX + column
+                val x = if (toricPaste) wrapCoordinate(pastedX, simulation.width) else pastedX
                 if (!simulation.positionInside(x, y)) continue
                 val id = cells[row * clipboardWidth + column]
                 if (id < 0 || id >= grainVisible.size || !grainVisible[id]) continue
@@ -917,18 +1011,32 @@ class SimulatorViewController(
         }
         ctx.globalAlpha = 1.0
 
-        // then the mode, then the frame: drawn last, it stays readable over the content
-        if (overwriteOnPaste) {
-            // "Écraser": warm frame and veil, the pasted content will replace what is there
-            ctx.fillStyle = "rgba(255, 160, 0, 0.22)"
-            ctx.fillRect(left, top, width, height)
-            ctx.strokeStyle = "rgba(255, 160, 0, 0.95)"
+        // then the frame: drawn last, it stays readable over the content
+        if (anchored != null) {
+            // anchored: a dark outline then a thick plain yellow frame, drawn just outside the
+            // block so the ghost content stays readable even for a one cell high copy; the
+            // small square on the top-left cell marks the paste origin
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.9)"
+            ctx.lineWidth = 5.0
+            ctx.strokeRect(left - 3.0, top - 3.0, width + 6.0, height + 6.0)
+            ctx.strokeStyle = "rgba(255, 224, 102, 1)"
+            ctx.lineWidth = 2.5
+            ctx.strokeRect(left - 1.25, top - 1.25, width + 2.5, height + 2.5)
+            ctx.fillStyle = "rgba(255, 224, 102, 1)"
+            ctx.fillRect(left + 1.0, top + 1.0, 3.0, 3.0)
         } else {
-            // "Conserver": thin cool frame, only the empty target cells will be written
-            ctx.strokeStyle = "rgba(120, 220, 255, 0.95)"
+            if (overwriteOnPaste) {
+                // "Écraser": warm frame and veil, the pasted content will replace what is there
+                ctx.fillStyle = "rgba(255, 160, 0, 0.22)"
+                ctx.fillRect(left, top, width, height)
+                ctx.strokeStyle = "rgba(255, 160, 0, 0.95)"
+            } else {
+                // "Conserver": thin cool frame, only the empty target cells will be written
+                ctx.strokeStyle = "rgba(120, 220, 255, 0.95)"
+            }
+            ctx.lineWidth = 2.0
+            ctx.strokeRect(left + 1.0, top + 1.0, max(0.0, width - 2.0), max(0.0, height - 2.0))
         }
-        ctx.lineWidth = 2.0
-        ctx.strokeRect(left + 1.0, top + 1.0, max(0.0, width - 2.0), max(0.0, height - 2.0))
         ctx.restore()
     }
 
@@ -952,6 +1060,8 @@ class SimulatorViewController(
         clipboardHeight = rect.height
         // a fresh extraction waits for its paste: the preview must float again
         clipboardPasted = false
+        // a new extraction cannot be anchored where the previous one was
+        anchor = null
         refreshEditButtons()
         // the paste preview must show up without waiting for the next mouse move
         render()
@@ -982,8 +1092,44 @@ class SimulatorViewController(
         return true
     }
 
-    /** Top-left cell of a paste: under the mouse, or the selection corner (button bar). */
+    /**
+     * Erases the visible agents of the selection from the grid, then drops the selection (the
+     * "Suppr" button, Ctrl+Delete and the `EraseSelection()` meta-action).
+     *
+     * Masked agents are left in place, exactly like [cutSelection]: they are invisible for the
+     * tool, so they do not belong to the selection. The clipboard is untouched.
+     */
+    fun eraseSelection(): Boolean {
+        if (readOnly) return false
+        val rect = selection ?: return false
+        val simulation = data.simulation
+        var changed = false
+        for (row in 0 until rect.height) {
+            val y = rect.y + row
+            if (y < 0 || y >= simulation.height) continue
+            for (column in 0 until rect.width) {
+                val x = rect.x + column
+                if (x < 0 || x >= simulation.width) continue
+                val index = simulation.toIndex(x, y)
+                if (visibleIdAt(index) >= 0) {
+                    data.resetIdAtIndex(index)
+                    changed = true
+                }
+            }
+        }
+        if (changed) updateAfterEdit()
+        // erasing always deselects, even when the rectangle was empty: the action is over
+        clearSelection()
+        return true
+    }
+
+    /**
+     * Top-left cell of a paste: the anchor when the copy is anchored, otherwise under the
+     * mouse, otherwise the selection corner (button bar, pointer outside the canvas).
+     */
     private fun pasteOrigin(): Pair<Int, Int>? {
+        // an anchored copy pastes where it was anchored, whatever the pointer does
+        anchor?.let { return it }
         val simulation = data.simulation
         if (simulation.positionInside(hoverX, hoverY)) return hoverX to hoverY
         val rect = selection ?: return null
@@ -1064,18 +1210,27 @@ class SimulatorViewController(
     /**
      * Pastes the extraction at a given top-left cell (the meta-action `Paste(x, y, overwrite)`
      * and `PasteAndFlush(x, y, overwrite)`), with an explicit paste mode: same rules as the
-     * manual paste, same model update path (undo), cells outside the grid ignored.
+     * manual paste, same model update path (undo).
+     *
+     * Cells outside the grid are dropped, unless the "Torique ?" switch ([toricPaste]) is on:
+     * their coordinates are then wrapped modulo the width and the height, so a paste that
+     * overflows on the left or on the top comes back from the right or the bottom edge (this
+     * also holds for negative coordinates, e.g. `Paste(-10, 10, true)`).
      */
     fun pasteAt(x: Int, y: Int, overwrite: Boolean): Boolean {
         if (readOnly) return false
         val cells = clipboard ?: return false
         val simulation = data.simulation
+        if (simulation.width <= 0 || simulation.height <= 0) return false
         var changed = false
         for (row in 0 until clipboardHeight) {
-            val targetY = y + row
+            val pastedY = y + row
+            // toric: fold the overflowing rows on the opposite side instead of dropping them
+            val targetY = if (toricPaste) wrapCoordinate(pastedY, simulation.height) else pastedY
             if (targetY < 0 || targetY >= simulation.height) continue
             for (column in 0 until clipboardWidth) {
-                val targetX = x + column
+                val pastedX = x + column
+                val targetX = if (toricPaste) wrapCoordinate(pastedX, simulation.width) else pastedX
                 if (targetX < 0 || targetX >= simulation.width) continue
                 val index = simulation.toIndex(targetX, targetY)
                 val incoming = cells[row * clipboardWidth + column]
@@ -1097,8 +1252,10 @@ class SimulatorViewController(
         }
         if (changed) updateAfterEdit()
         // the paste is done: the floating preview disappears until the next copy or cut,
-        // even though the clipboard stays available for another Ctrl+V
+        // even though the clipboard stays available for another Ctrl+V; the placement is
+        // consumed too, so the next paste is again placed under the mouse
         clipboardPasted = true
+        anchor = null
         render()
         return true
     }
@@ -1130,17 +1287,34 @@ class SimulatorViewController(
         return text.isNotEmpty()
     }
 
-    /** Ctrl+C / Ctrl+X / Ctrl+V (Cmd on macOS) on the simulation clipboard. */
+    /**
+     * Ctrl+C / Ctrl+X / Ctrl+V on the simulation clipboard, Ctrl+R / Ctrl+F / Ctrl+Shift+F on
+     * its transformations, Ctrl+Delete on the selection content and Ctrl+Shift+S to deselect
+     * (Cmd on macOS). Escape drops the pending paste preview.
+     */
     private fun handleShortcut(event: Event) {
-        if (readOnly) return
         val evt = event as? KeyboardEvent ?: return
+        // the text fields, the editors and the search boxes keep all their keys
+        if (isEditableTarget(evt.target)) return
+        if (readOnly) return
+        if (evt.key == "Escape") {
+            if (dismissPreview()) evt.preventDefault()
+            return
+        }
         if (!evt.ctrlKey && !evt.metaKey) return
         if (evt.altKey) return
-        if (isEditableTarget(evt.target)) return
         when (evt.key.lowercase()) {
             "c" -> if (!hasTextSelection() && copySelection()) evt.preventDefault()
             "x" -> if (!hasTextSelection() && cutSelection()) evt.preventDefault()
             "v" -> if (pasteSelection()) evt.preventDefault()
+            // the transformations work on the clipboard, anchored or floating
+            "r" -> if (rotateClipboard()) evt.preventDefault()
+            "f" -> {
+                val flipped = if (evt.shiftKey) flipClipboardVertical() else flipClipboardHorizontal()
+                if (flipped) evt.preventDefault()
+            }
+            "s" -> if (evt.shiftKey && clearSelection()) evt.preventDefault()
+            "delete" -> if (eraseSelection()) evt.preventDefault()
         }
     }
 
@@ -1232,75 +1406,139 @@ class SimulatorViewController(
 
     // ------------------------------------------------------------- edit toolbar
 
-    val copyButton = Button(
-        page.i18n("Copy"), Icon("copy"), color = ElementColor.Primary, rounded = true
-    ) { copySelection() }
+    /** Native tooltip of a button: the action and its keyboard shortcut, in the current language. */
+    private fun withTooltip(button: Button, key: String): Button = button.also {
+        it.root.setAttribute("title", page.i18n(key))
+    }
 
-    val cutButton = Button(
-        page.i18n("Cut"), Icon("cut"), color = ElementColor.Primary, rounded = true
-    ) { cutSelection() }
-
-    val pasteButton = Button(
-        page.i18n("Paste"), Icon("paste"), color = ElementColor.Primary, rounded = true
-    ) { pasteSelection() }
-
-    val deselectButton = Button(
-        page.i18n("Deselect"), Icon("times"), color = ElementColor.Warning, rounded = true
-    ) { clearSelection() }
-
-    /** Icon-only button whose native tooltip explains the action (FontAwesome icon name). */
-    private fun transformButton(icon: String, tooltipKey: String, action: () -> Unit): Button =
-        iconButton(Icon(icon), ElementColor.Info, rounded = true) { action() }.also { button ->
-            button.root.setAttribute("title", page.i18n(tooltipKey))
-        }
-
-    /** Quarter turn of the clipboard (see [rotateClipboard]). */
-    val rotateButton = transformButton("rotate-right", "Rotate 90° (clockwise)") { rotateClipboard() }
-
-    /** Left/right mirror of the clipboard (see [flipClipboardHorizontal]). */
-    val flipHorizontalButton = transformButton("arrows-left-right", "Flip horizontal") { flipClipboardHorizontal() }
-
-    /** Top/bottom mirror of the clipboard (see [flipClipboardVertical]). */
-    val flipVerticalButton = transformButton("arrows-up-down", "Flip vertical") { flipClipboardVertical() }
-
-    private fun radioInput(mode: String, checked: Boolean): HTMLInputElement =
-        (document.createElement("input") as HTMLInputElement).apply {
-            type = "radio"
-            name = "centy-paste-mode"
-            value = mode
-            this.checked = checked
-        }
-
-    /** Radios of the paste mode, built by hand like the grid size ones (Bulma's API is not usable here). */
-    private val overwriteRadioInput = radioInput("overwrite", false)
-    private val keepRadioInput = radioInput("keep", true)
-
-    private fun radioLabel(input: HTMLInputElement, text: String) = HtmlWrapper(
-        (document.createElement("label") as HTMLLabelElement).apply {
-            classList.add("radio")
-            appendChild(input)
-            appendChild(document.createTextNode(" " + text))
-        }
+    val copyButton = withTooltip(
+        Button(page.i18n("Copy"), Icon("copy"), color = ElementColor.Primary, rounded = true) { copySelection() },
+        "Copy (Ctrl+C)"
     )
 
-    private val overwriteRadio = radioLabel(overwriteRadioInput, page.i18n("Overwrite"))
-    private val keepRadio = radioLabel(keepRadioInput, page.i18n("Keep"))
+    val cutButton = withTooltip(
+        Button(page.i18n("Cut"), Icon("cut"), color = ElementColor.Primary, rounded = true) { cutSelection() },
+        "Cut (Ctrl+X)"
+    )
+
+    val pasteButton = withTooltip(
+        Button(page.i18n("Paste"), Icon("paste"), color = ElementColor.Primary, rounded = true) { pasteSelection() },
+        "Paste (Ctrl+V)"
+    )
+
+    /** Erases the content of the selection in the grid, then deselects (see [eraseSelection]). */
+    val eraseButton = withTooltip(
+        Button(page.i18n("Erase"), Icon("eraser"), color = ElementColor.Danger, rounded = true) { eraseSelection() },
+        "Erase selection (Ctrl+Delete)"
+    )
+
+    val deselectButton = withTooltip(
+        Button(page.i18n("Deselect"), Icon("times"), color = ElementColor.Warning, rounded = true) { clearSelection() },
+        "Deselect (Ctrl+Shift+S)"
+    )
+
+    /**
+     * Icon-only button whose symbol is drawn inline.
+     *
+     * The FontAwesome 5 solid set loaded by the project has no mirror icon (two arrows on both
+     * sides of the plane they mirror), and a text label is far wider than the other buttons of
+     * the bar. The SVG inherits currentColor, so the button colour still applies, and it fills
+     * the same `.icon` box as the FontAwesome glyphs, so all the buttons keep the same size.
+     */
+    private fun svgButton(paths: String, tooltipKey: String, action: () -> Unit): Button {
+        val button = Button("", Icon("circle"), color = ElementColor.Info, rounded = true) { action() }
+        button.root.innerHTML = """<span class="icon is-small"><svg viewBox="0 0 24 24" """ +
+            """width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" """ +
+            """stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">$paths</svg></span>"""
+        return withTooltip(button, tooltipKey)
+    }
+
+    /** Double arrow on both sides of a vertical separation plane: the horizontal mirror. */
+    private val flipHorizontalSvg =
+        """<path d="M4 12h5.5M4 12l2.5-2.5M4 12l2.5 2.5"/>""" +
+            """<path d="M20 12h-5.5M20 12l-2.5-2.5M20 12l-2.5 2.5"/>""" +
+            """<path d="M12 3v18"/>"""
+
+    /** Same symbol turned a quarter: the separation plane is horizontal. */
+    private val flipVerticalSvg =
+        """<path d="M12 4v5.5M12 4l-2.5 2.5M12 4l2.5 2.5"/>""" +
+            """<path d="M12 20v-5.5M12 20l-2.5-2.5M12 20l2.5 2.5"/>""" +
+            """<path d="M3 12h18"/>"""
+
+    /**
+     * Quarter turn of the clipboard (see [rotateClipboard]). The FontAwesome solid set of the
+     * project does contain "redo", a clockwise circular arrow: no need to draw it.
+     */
+    val rotateButton = withTooltip(
+        iconButton(Icon("redo"), ElementColor.Info, rounded = true) { rotateClipboard() },
+        "Rotate 90° (Ctrl+R)"
+    )
+
+    /** Left/right mirror of the clipboard (see [flipClipboardHorizontal]). */
+    val flipHorizontalButton =
+        svgButton(flipHorizontalSvg, "Flip horizontal (Ctrl+F)") { flipClipboardHorizontal() }
+
+    /** Top/bottom mirror of the clipboard (see [flipClipboardVertical]). */
+    val flipVerticalButton =
+        svgButton(flipVerticalSvg, "Flip vertical (Ctrl+Shift+F)") { flipClipboardVertical() }
+
+    /**
+     * Toolbar switch with its caption above it, in a column. Bulma's [Switch] draws the text
+     * on the right of the input, which does not fit a compact bar where two switches sit side
+     * by side: the caption is therefore a separate label over the switch.
+     */
+    private fun captionedSwitch(
+        caption: String, checked: Boolean, color: ElementColor, onChange: (Boolean) -> Unit
+    ): Div {
+        val captionLabel = Label(page.i18n(caption)).apply {
+            root.classList.add("is-size-7")
+            root.style.marginBottom = "0.15rem"
+            root.style.whiteSpace = "nowrap"
+        }
+        val switch = Switch(
+            text = "", checked = checked, color = color, size = Size.Small, rounded = true
+        ) { _, value -> onChange(value) }
+        // Bulma's field wrapper carries a bottom margin: the caption already spaces the switch
+        switch.root.style.marginBottom = "0"
+        return Div(captionLabel, switch).apply {
+            root.classList.add("has-text-centered")
+            root.style.marginLeft = "1rem"
+            // clicking the caption toggles the switch, like a native <label for>
+            switch.root.querySelector("input")?.let { input ->
+                captionLabel.root.setAttribute("for", input.id)
+            }
+        }
+    }
+
+    /**
+     * "Torique ?" switch: when on, a paste that overflows the grid is folded on the opposite
+     * side (see [toricPaste]).
+     */
+    private val toricControl = captionedSwitch("Toric ?", toricPaste, ElementColor.Info) {
+        toricPaste = it
+    }
+
+    /** "Écraser ?" switch: when on, a paste replaces the visible agents in place. */
+    private val overwriteControl = captionedSwitch("Overwrite ?", overwriteOnPaste, ElementColor.Warning) {
+        overwriteOnPaste = it
+    }
 
     private val editButtonsField = Field(addons = true).apply {
         body = listOf(
-            Control(copyButton), Control(cutButton), Control(pasteButton),
+            Control(copyButton), Control(cutButton), Control(pasteButton), Control(eraseButton),
             Control(rotateButton), Control(flipHorizontalButton), Control(flipVerticalButton),
             Control(deselectButton)
         )
     }
 
-    private val pasteModeField = Div(overwriteRadio, keepRadio).apply {
-        root.classList.add("control")
-        root.style.paddingTop = "6px"
+    /** Paste options, right of the deselect button: toric paste and overwrite switches. */
+    private val pasteOptionsField = Div(toricControl, overwriteControl).apply {
+        root.classList.add("is-flex", "is-align-items-flex-end")
+        root.style.paddingTop = "2px"
     }
 
-    /** Bar under the drawing tools: copy, cut, paste, deselect and the paste mode. */
-    val editToolbar = Level(center = listOf(editButtonsField, pasteModeField))
+    /** Bar under the drawing tools: copy, cut, paste, deselect and the paste options. */
+    val editToolbar = Level(center = listOf(editButtonsField, pasteOptionsField))
 
     private fun refreshEditButtons() {
         val selected = selection != null
@@ -1308,6 +1546,7 @@ class SimulatorViewController(
         copyButton.disabled = !selected
         cutButton.disabled = !selected || readOnly
         pasteButton.disabled = !filled || readOnly
+        eraseButton.disabled = !selected || readOnly
         // the three transformations of the extraction need a filled clipboard, nothing else
         rotateButton.disabled = !filled || readOnly
         flipHorizontalButton.disabled = !filled || readOnly
@@ -1399,8 +1638,6 @@ class SimulatorViewController(
         window.addEventListener("pointerup", selectionPointerUp)
         // document level, so the shortcuts also work right after a click on the canvas
         document.addEventListener("keydown", shortcutCallback)
-        overwriteRadioInput.addEventListener("change", { overwriteOnPaste = true })
-        keepRadioInput.addEventListener("change", { overwriteOnPaste = false })
         editToolbar.hidden = readOnly
         refreshEditButtons()
     }
@@ -1435,6 +1672,7 @@ class SimulatorViewController(
                 is GridCommand.Select -> selectRect(command.x1, command.y1, command.x2, command.y2)
                 GridCommand.Cut -> cutSelection()
                 GridCommand.Copy -> copySelection()
+                GridCommand.EraseSelection -> eraseSelection()
                 is GridCommand.Paste -> pasteAt(command.x, command.y, command.overwrite)
                 GridCommand.FlushSelection -> clearSelection()
                 is GridCommand.PasteAndFlush -> {
@@ -1453,21 +1691,31 @@ class SimulatorViewController(
         render()
     }
 
-    /** Shows or hides the agents of type [grainId], like the "display" checkbox of the explorer. */
+    /** Shows or hides the agents of type [grainId], like the "Show ?" switch of the explorer. */
     private fun setGrainVisible(grainId: Int, visible: Boolean) {
         // unknown id: silently ignored (the model may have changed since the formula was written)
         if (data.model.grains.none { it.id == grainId }) return
         val hidden = page.appContext.hiddenGrainIds
         val changed = if (visible) hidden.remove(grainId) else hidden.add(grainId)
         if (!changed) return
-        // the colour table and the visibility flags are cached: rebuild them before repainting
-        invalidateColors()
+        // the colour table and the visibility flags are cached: rebuild them before repainting;
+        // refreshVisibility also tells the explorer switches to re-read the hidden ids
+        refreshVisibility()
     }
+
+    /**
+     * Called whenever the hidden agent/field ids may have changed, so the explorer switches can
+     * re-read them (see [refreshVisibility] and [setGrainVisible]). Wired by the ModelController.
+     */
+    var onVisibilityChanged: (() -> Unit)? = null
 
     /** Re-applies the visibility toggles from the side panel (hidden grain types and fields). */
     fun refreshVisibility() {
         invalidateColors()
         render()
+        // the switches own the ids they hide, but a meta-action can change them out of their
+        // own event: they must then be told to re-read the set, otherwise they keep a stale state
+        onVisibilityChanged?.invoke()
     }
 
     override fun refresh() = render()
