@@ -105,8 +105,13 @@ de fichiers.
 
 #### Captures (`Capture()`) et dossier de travail
 
-La méta-action `Capture()` demande une image JPEG (qualité 0,92) de la vue de
-simulation ; le fichier s'appelle `NOM_MODELE__PAS.jpg` (ex. `GoL_Modifiers__12.jpg`).
+La méta-action `Capture()` demande une image de la vue de simulation ; le fichier
+s'appelle `NOM_MODELE__PAS.jpg` (ex. `GoL_Modifiers__12.jpg`). Le **format** (JPEG
+qualité 0,95 par défaut, ou PNG sans perte), la **qualité** et la **résolution** de
+cette image se règlent dans l'onglet **Enregistrements** des paramètres (§4.5bis et
+aide §9.6) ; en mode « taille de la grille », l'image fait `largeur × N` par
+`hauteur × N` pixels (N = 1 à 8, défaut 4), quelle que soit la fenêtre, et le
+fichier porte l'extension `.png` quand le format est PNG.
 Le **bouton maison** de la rangée du bouton « Informations sur le modèle »
 — icône `fa-home` pleine, infobulle et `aria-label` portant l'état (« Dossier de
 travail — Défini », « Dossier de travail — Non défini », « Dossier de travail —
@@ -135,8 +140,8 @@ Storage) : la capture est un `Blob` en mémoire, écrit dans le dossier ou tél�
 | Firefox, Safari | non | téléchargées |
 
 Sans dossier, sans permission ou en cas d'échec d'écriture, l'image est
-téléchargée et un message dit toujours laquelle des deux voies a été suivie :
-aucune capture ne bascule silencieusement en téléchargement, et rien n'est
+téléchargée et le **journal** (§4.5ter) dit toujours laquelle des deux voies a été
+suivie : aucune capture ne bascule silencieusement en téléchargement, et rien n'est
 réservé à Chrome ou à Edge. Détails : aide intégrée §9.
 
 > **⚠ Mise en garde — Opera** : les graphiques de la page Simulation peuvent
@@ -324,8 +329,9 @@ fonctions de formule et les prédicats restent en **minuscules** (`abs`, `min`, 
 | `Rewind()` | revient à l'état initial **sans relancer** (même effet que le bouton de rembobinage) |
 | `Restart()` | revient à l'état initial **et relance** la course |
 
-**Captures** — `Capture()` (sans argument) demande une image **JPEG** (qualité 0,92) de la vue de
-simulation, prise à la fin du pas qui l'émet, après le rendu complet et avant le pas suivant. Le
+**Captures** — `Capture()` (sans argument) demande une image (JPEG qualité 0,95 par défaut, ou PNG
+sans perte) de la vue de simulation, prise à la fin du pas qui l'émet, après le rendu complet et
+avant le pas suivant. Le
 noyau ne dessine rien : il incrémente un simple compteur (`Simulator.captureRequestCount`, sur le
 modèle de `modifierPauseCount`), que la vue consomme (`consumeCaptureRequest()`) pour encoder le
 canevas. Le fichier s'appelle `NOM_MODELE__PAS.jpg` (`GoL_Modifiers__12.jpg`), le nom du modèle
@@ -339,6 +345,38 @@ renouvelable d'un clic), ou **téléchargé** quand aucun dossier n'est défini 
 toujours laquelle des deux voies a été suivie. Aucun octet d'image n'est stocké par le navigateur :
 la capture reste un `Blob` en mémoire jusqu'à l'écriture ou au téléchargement. Voir l'aide
 intégrée §9 pour les limites par navigateur.
+
+### 4.5quater Onglet **Enregistrements** (réglages de capture et de CSV)
+
+Le dernier onglet des paramètres, **après Modèle**, décide de ce que l'application écrit. Ses
+réglages sont des préférences **du navigateur** : ils vivent dans `localStorage`, sous la clé
+`centyllion-recording-settings` (une ligne `clé=valeur` par réglage), et **jamais** dans le fichier
+`.nbd2` — ouvrir un projet venu d'un autre poste ne change pas la façon dont ce poste enregistre.
+
+| Réglage | Valeurs | Défaut |
+|---|---|---|
+| Format des images | JPEG (avec perte) / PNG (sans perte) | JPEG |
+| Qualité JPEG | curseur 0,50 → 1,00, pas de 0,05 (désactivé en PNG) | 0,95 |
+| Résolution | « taille de l'écran » (le canevas affiché) / « taille de la grille » | taille de l'écran |
+| Pixels par cellule | 1 → 8 (n'agit qu'en taille de grille) | 4 |
+| Séparateur CSV | tabulation / virgule / point-virgule / espace | tabulation |
+
+**Taille de la grille** : la grille entière est redessinée **hors écran** à `N` pixels par cellule,
+puis encodée. L'image fait exactement `largeur × N` par `hauteur × N` pixels (grille 100 × 100 à
+4 pixels par cellule → 400 × 400), quel que soit la fenêtre, et ne contient que les cellules et les
+champs — la grille de dessin, la sélection et l'aperçu du pinceau sont des aides de l'écran. Les
+deux modes réutilisent le **même rendu** (`SimulatorViewController.paint`), paramétré par
+l'échelle : il n'existe pas de second moteur de rendu. C'est ce réglage, et non la qualité, qui
+change réellement le détail d'une capture : à qualité 0,50 comme à 1,00, les dimensions sont
+identiques et seul le poids du fichier change.
+
+**Séparateur CSV** : il est écrit entre les colonnes des **deux** exports de courbes
+(`agents.csv`, `fields.csv`), en-tête compris. Un nom qui contient le séparateur est **mis entre
+guillemets** (guillemets internes doublés) : `step,"Membrane, interne",Autre` en virgule, si bien
+que le nombre de colonnes reste celui du modèle. Les règles pures (bornes, conversions, échappement,
+sérialisation) sont dans `core/.../model/recording.kt` et testées par
+`core/src/commonTest/.../RecordingSettingsTest.kt` — une valeur absente, corrompue ou hors bornes
+retombe sur sa valeur par défaut (séparateur inconnu → tabulation).
 
 `Pause(t)` est une **pause de confort** (démonstration), pas une horloge de modèle : elle
 n'exécute aucun pas, donc la grille et la trajectoire des états ne dépendent pas du temps et
@@ -385,6 +423,35 @@ modèles déjà enregistrés (il a été la seule méta-fonction à ne pas respe
 il est **obsolète** et n'est plus documenté ailleurs que comme alias. `AddDisc` et `EraseDisc` sont
 de même les anciens noms de `AddCircle` et `EraseCircle` : acceptés, obsolètes, remplacés dans
 l'aide par les noms du cercle.
+
+### 4.5ter Journal de la simulation
+
+Sous l'écran de simulation — sous la barre de dessin et la barre d'édition — un panneau
+**journal** remplace les messages flottants qui recouvraient le haut de la grille. Une ligne
+porte son **niveau en toutes lettres** (la couleur n'est jamais le seul signal), le **numéro de
+pas affiché** et le message :
+
+| Niveau | Couleur | Ce qu'il signale |
+|---|---|---|
+| `META` | bleu | une méta-action exécutée par un modificateur, par exemple `Pause(2) exécutée` |
+| `INFO` | vert | un événement normal : capture écrite ou téléchargée, journal exporté, import ou chargement depuis la galerie |
+| `WARN.` | orange | un point à vérifier : pause demandée par un modificateur (avec sa durée), permission du dossier à renouveler, fichier illisible |
+| `ERREUR` | rouge | un échec : capture impossible, écriture refusée, fichier non décodable |
+
+Le tampon vit dans le noyau (`Simulator.journal`, `core/.../model/journal.kt`) et il est **borné à
+200 entrées** : les plus anciennes sortent. Les méta-actions l'alimentent **au moment où elles
+s'exécutent** ; la vue y ajoute ce qu'elle est seule à savoir (capture écrite, pause demandée par
+un modificateur, messages de la galerie et de l'import). Un rembobinage ne l'efface pas, un nouveau
+projet repart d'un journal vide. Les **dialogues de confirmation restent des dialogues** : le
+journal ne remplace pas une question.
+
+L'en-tête **replie** la liste ; replié, il annonce le **nombre d'avertissements**. L'état est
+mémorisé dans `localStorage` (`centyllion-journal-collapsed`). L'**icône d'export**, à droite de
+l'en-tête, est désactivée quand le journal est vide et ne le vide jamais : elle écrit
+`journal/NOM_MODELE__journal.txt` dans le dossier de travail — nom nettoyé comme celui d'une
+capture — ou télécharge le même fichier. Le texte contient une ligne d'en-tête (date et nom du
+modèle) puis une ligne par entrée, `niveau`, `pas` et `message` séparés par des tabulations, avec
+les mots fixes `meta`, `info`, `avert`, `erreur`. Détails : aide intégrée §10.
 
 ### 4.6 Barre de dessin
 
@@ -515,6 +582,7 @@ Tests couvrant :
 - Expressions de condition (`testConditionExpression`, `testConditionExpressionFalse`)
 - Mise à jour parallèle vs séquentielle (`testParallelUpdate`)
 - Validation des formules (`FormulaTest`)
+- Journal de la simulation : bornage à 200 entrées, ordre, format d'export (`JournalTest`)
 
 ---
 

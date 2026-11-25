@@ -19,6 +19,7 @@ import com.centyllion.client.tutorial.Tutorial
 import com.centyllion.client.tutorial.TutorialLayer
 import com.centyllion.client.capture.WorkFolderController
 import com.centyllion.client.gallery.GalleryController
+import com.centyllion.model.JournalLevel
 import com.centyllion.model.ModelAndSimulation
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
@@ -38,6 +39,9 @@ private const val FILE_NAME_KEY = "saveFileName"
 class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     private var tutorialLayer: TutorialLayer<ShowPage>? = null
+
+    /** Version number of the running bundle (`version.json`), shown in the About dialog. */
+    private var versionNumber: String = ""
 
     /** Build date and time of the running bundle (`version.json`), shown in the About dialog. */
     private var versionDate: String = ""
@@ -125,6 +129,14 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         controller.open()
     }
 
+    /**
+     * Routes a message to the journal of the simulation view, under the grid: the gallery, the
+     * import and the working folder no longer cover the simulation with a floating notice.
+     */
+    override fun journal(level: JournalLevel, content: String, vararg parameters: Any) {
+        simulationController.appendJournal(level, appContext.locale.i18n(content, *parameters))
+    }
+
     val modelInfoButton = Button(i18n("Model information"), Icon("info-circle")) {
         val nameInput = Input(model.model.name, placeholder = i18n("Model Name"), rounded = true)
         val descriptionInput = TextArea(
@@ -172,11 +184,19 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     /**
      * Where the pictures of the `Capture()` meta-action go: a working folder chosen by the
-     * visitor, or the downloads. The control keeps its own state (IndexedDB handle + two strings
-     * of localStorage), so the run loop can save a capture without going through this page.
+     * visitor, or the downloads. Its control is the home button placed beside the model
+     * information button; the tooltip of the button says in which state the folder is, and its
+     * colour (magenta when not set, blue when set) makes it readable at a glance. The control
+     * keeps its own state (IndexedDB handle + two strings of localStorage), so the run loop can
+     * save a capture without going through this page.
+     *
+     * Public because the tour of the first connection points at its button and opens its
+     * dialog from the step that presents the working folder.
      */
     val workFolderController = WorkFolderController(this)
 
+    /** Title of the page: the anchor the tour of the first connection points at, as the identity
+     *  of the application. */
     val titleLabel = Label("NetBioDyn", size = Size.Large)
 
     val tutorialControl = Control(Button(
@@ -248,7 +268,14 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
             Table(
                 body = listOf(
                     row("Name", span(distributionName)),
-                    row("Version", span(versionDate.ifBlank { i18n("unknown") })),
+                    row(
+                        "Version",
+                        span(
+                            listOf(versionNumber.ifBlank { i18n("unknown") }, versionDate)
+                                .filter { it.isNotBlank() }
+                                .joinToString(" — ")
+                        )
+                    ),
                     row("Authors", span(authors)),
                     TableRow(
                         TableCell(i18n("Git repository")).apply { root.classList.add("has-text-weight-bold") },
@@ -280,9 +307,10 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
     }
 
     /**
-     * Tutorial menu: the two beginner tutorials (bacterias, fields) and the
-     * expert ones (Game of Life, actions, field formula). Each tutorial can also
-     * be reached from the conclusion of the previous one.
+     * Tutorial menu: the tour of the first connection and the editing tutorial come first,
+     * then the two beginner tutorials (bacterias, fields) and the expert ones (Game of Life,
+     * actions, field formula). Each tutorial can also be reached from the conclusion of the
+     * previous one.
      */
     fun startTutorial() {
         val beginner = i18n("Beginner")
@@ -363,6 +391,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
                 saveHandle = null
                 // an old project is migrated on import, like in Endless Bloom
                 setModel(netbiodynJson.decodeFromString<ModelAndSimulation>(text).migrated())
+                journal(JournalLevel.INFO, "Model imported: %0.", selectedFile.name)
             }
             reader.readAsText(selectedFile)
         }
@@ -477,7 +506,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
             appContext.api.fetch("GET", modelUrl)
                 .then(
                     onFulfilled = { setModel(netbiodynJson.decodeFromString(it)) },
-                    onRejected = { notification("Can't load model at $modelUrl", ElementColor.Danger) },
+                    onRejected = { journal(JournalLevel.ERROR, "Can't load model at %0", modelUrl) },
                 )
         } else {
             val storage = loadFromStorage()
@@ -485,10 +514,24 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         }
 
         appContext.api.fetchVersion().then {
+            versionNumber = it.version
             versionDate = it.date
         }
 
         // restore the file handle of the last saved file (quick save across restarts)
         restoreFileHandle("save").then { handle: dynamic -> saveHandle = handle }
+
+        // first connection: the tour opens by itself, once. The persistent flag is set when it
+        // is closed (Skip, close button or end), so a reload never starts it again; the delay
+        // lets the page be attached to the document, which the layer needs to measure its
+        // targets.
+        if (!GettingStartedTour.seen()) {
+            window.setTimeout({
+                // the visitor may have opened a tutorial or a dialog in the meantime
+                if (tutorialLayer == null && !GettingStartedTour.seen()) {
+                    startTutorial(GettingStartedTour(this))
+                }
+            }, 900)
+        }
     }
 }
