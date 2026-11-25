@@ -36,6 +36,9 @@ import bulma.Field as BField
 private const val FILE_NAME_KEY = "saveFileName"
 
 /** ShowPage is used to present and edit (if not read-only) a model and a simulation. */
+/** Violet of the gallery button, deeper than the blue of the model buttons. */
+private const val GALLERY_VIOLET = "#5b4bd6"
+
 class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     private var tutorialLayer: TutorialLayer<ShowPage>? = null
@@ -120,9 +123,10 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
     /** Name and description of the model, edited in a dialog (fuchsia, above the Agents). */
     private var galleryController: GalleryController? = null
 
+    /** Deeper violet than the creation, load and save buttons: the gallery is a place, not an action. */
     val galleryControl = Control(Button(
         i18n("Gallery"), Icon("images"), color = ElementColor.Primary
-    ) { showGallery() })
+    ) { showGallery() }.apply { root.style.backgroundColor = GALLERY_VIOLET })
 
     fun showGallery() {
         val controller = galleryController ?: GalleryController(this).also { galleryController = it }
@@ -200,15 +204,15 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
     val titleLabel = Label("NetBioDyn", size = Size.Large)
 
     val tutorialControl = Control(Button(
-        i18n("Tutorial"), Icon("question-circle"), color = ElementColor.Primary
+        i18n("Tutorial"), Icon("question-circle"), color = ElementColor.Success
     ) { startTutorial() })
 
     val helpControl = Control(Button(
-        i18n("Help"), Icon("info-circle"), color = ElementColor.Primary
+        i18n("Help"), Icon("info-circle"), color = ElementColor.Success
     ) { window.open("help.html", "_blank") })
 
     val aboutControl = Control(Button(
-        i18n("About"), Icon("info"), color = ElementColor.Primary
+        i18n("About"), Icon("info"), color = ElementColor.Success
     ) { showAbout() })
 
     val expertModeSwitch = Switch(
