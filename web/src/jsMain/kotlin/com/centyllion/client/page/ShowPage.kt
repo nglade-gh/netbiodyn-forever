@@ -231,7 +231,6 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         helpControl,
         aboutControl,
         Control(undoRedo.undoButton), Control(undoRedo.redoButton),
-        // TODO hide tutorial for now tutorialControl,
         grouped = true, groupedMultiline = true
     )
 
