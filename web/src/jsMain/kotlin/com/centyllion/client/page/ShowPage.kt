@@ -15,6 +15,7 @@ import com.centyllion.client.tutorial.FieldTutorial
 import com.centyllion.client.tutorial.GameOfLifeTutorial
 import com.centyllion.client.tutorial.Tutorial
 import com.centyllion.client.tutorial.TutorialLayer
+import com.centyllion.client.capture.WorkFolderController
 import com.centyllion.client.gallery.GalleryController
 import com.centyllion.model.ModelAndSimulation
 import kotlinx.browser.window
@@ -161,6 +162,13 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         i18n("Save As"), Icon("download"), color = ElementColor.Primary
     ) { saveAs() })
 
+    /**
+     * Where the pictures of the `Capture()` meta-action go: a working folder chosen by the
+     * visitor, or the downloads. The control keeps its own state (IndexedDB handle + two strings
+     * of localStorage), so the run loop can save a capture without going through this page.
+     */
+    private val workFolderController = WorkFolderController(this)
+
     val tutorialControl = Control(Button(
         i18n("Tutorial"), Icon("question-circle"), color = ElementColor.Primary
     ) { startTutorial() })
@@ -182,6 +190,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     val tools = BField(
         galleryControl,
+        workFolderController.control,
         newControl,
         Control(fileInput),
         saveAsControl,
@@ -200,7 +209,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
                     left = listOf(
                         Label("NetBioDyn", size = Size.Large)
                     ),
-                    center = listOf(tools),
+                    center = listOf(tools, workFolderController.note),
                     right = listOf(expertModeSwitch)
                 ),
                 size = ColumnSize.Full
