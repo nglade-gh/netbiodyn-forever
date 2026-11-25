@@ -676,12 +676,14 @@ object French: Locale {
             "Copie les agents visibles de la sélection dans le presse-papiers, puis les efface de la grille, par exemple %0."
         "Pastes the clipboard with (x, y) as its top-left corner; overwrite is true (replace) or false (keep), for instance %0." ->
             "Colle le presse-papiers avec (x, y) comme coin supérieur gauche ; overwrite vaut true (écraser) ou false (conserver), par exemple %0."
-        "Drops the selection; the clipboard is left untouched, for instance %0." ->
-            "Abandonne la sélection ; le presse-papiers n'est pas modifié, par exemple %0."
-        "Erases the visible agents of the selection from the grid, then drops the selection, for instance %0." ->
-            "Efface de la grille les agents visibles de la sélection, puis abandonne la sélection, par exemple %0."
-        "Pastes the clipboard with (x, y) as its top-left corner, then drops the selection, for instance %0." ->
-            "Colle le presse-papiers avec (x, y) comme coin supérieur gauche, puis abandonne la sélection, par exemple %0."
+        "Empties the memory: the copied or cut selection is forgotten and nothing is left to paste. The grid is not modified, and the selection rectangle is dropped as well, for instance %0." ->
+            "Vide la mémoire : la sélection copiée ou coupée est oubliée et il n'y a plus rien à coller. La grille n'est pas modifiée, et le rectangle de sélection est lâché aussi, par exemple %0."
+        "Drops the selection rectangle without touching the grid or the memory: it does only that, for instance %0." ->
+            "Lâche le rectangle de sélection sans toucher à la grille ni à la mémoire : elle ne fait que cela, par exemple %0."
+        "Erases the visible agents of the selection from the grid, then drops the selection rectangle, for instance %0." ->
+            "Efface de la grille les agents visibles de la sélection, puis lâche le rectangle de sélection, par exemple %0."
+        "Pastes the clipboard with (x, y) as its top-left corner, then empties the memory and drops the selection rectangle, for instance %0." ->
+            "Colle le presse-papiers avec (x, y) comme coin supérieur gauche, puis vide la mémoire et lâche le rectangle de sélection, par exemple %0."
         "Turns the clipboard N quarter turns clockwise (negative: counter-clockwise), for instance %0." ->
             "Fait tourner le presse-papiers de N quarts de tour dans le sens horaire (négatif : anti-horaire), par exemple %0."
         "Mirrors the clipboard left/right, for instance %0." ->
@@ -692,8 +694,8 @@ object French: Locale {
             "Active (true) ou désactive (false) l'interrupteur Torique ? de la barre d'édition, comme l'interrupteur lui-même, par exemple %0."
         "Turns the Overwrite ? switch of the edit bar on (true) or off (false), like the switch itself, for instance %0." ->
             "Active (true) ou désactive (false) l'interrupteur Écraser ? de la barre d'édition, comme l'interrupteur lui-même, par exemple %0."
-        "The grid commands work on the current selection and on the clipboard of the simulation view, not on a cell. They are applied at the end of the step, in the order of the formula: a selection or a clipboard built by a modifier can then be used by hand. Copy, Cut, Paste, PasteAndFlush, Rotate, FlipX and FlipY are ignored when the selection or the clipboard they need is empty." ->
-            "Les commandes de grille agissent sur la sélection courante et sur le presse-papiers de la vue de simulation, pas sur une cellule. Elles sont appliquées à la fin de l'étape, dans l'ordre de la formule : une sélection ou un presse-papiers construit par un modificateur peut ensuite être utilisé à la main. Copy, Cut, Paste, PasteAndFlush, Rotate, FlipX et FlipY sont ignorés quand la sélection ou le presse-papiers dont ils ont besoin est vide. Trois commandes touchent des objets différents : EraseSelection() détruit les agents de la zone sélectionnée puis désélectionne ; FlushSelection() vide la mémoire, donc la sélection copiée ou coupée est oubliée et il n'y a plus rien à coller ; Unselect() lâche le rectangle de sélection sans toucher à la mémoire. PasteAndFlush() colle puis vide la mémoire."
+        "The grid commands work on the current selection and on the clipboard of the simulation view, not on a cell. They are applied at the end of the step, in the order of the formula: a selection or a clipboard built by a modifier can then be used by hand. Copy, Cut, Paste, PasteAndFlush, Rotate, FlipX and FlipY are ignored when the selection or the clipboard they need is empty. Four commands end an operation and drop the selection rectangle as well: EraseSelection() destroys the agents of the selected zone, then deselects; FlushSelection() empties the memory, so the copied or cut selection is forgotten, and deselects; PasteAndFlush() pastes, then empties the memory and deselects. Unselect() does only that: it drops the rectangle, without touching the grid or the memory." ->
+            "Les commandes de grille agissent sur la sélection courante et sur le presse-papiers de la vue de simulation, pas sur une cellule. Elles sont appliquées à la fin de l'étape, dans l'ordre de la formule : une sélection ou un presse-papiers construit par un modificateur peut ensuite être utilisé à la main. Copy, Cut, Paste, PasteAndFlush, Rotate, FlipX et FlipY sont ignorés quand la sélection ou le presse-papiers dont ils ont besoin est vide. Quatre commandes terminent une opération et lâchent aussi le rectangle de sélection : EraseSelection() détruit les agents de la zone sélectionnée, puis désélectionne ; FlushSelection() vide la mémoire, donc la sélection copiée ou coupée est oubliée, et désélectionne ; PasteAndFlush() colle, puis vide la mémoire et désélectionne. Unselect() ne fait que cela : elle lâche le rectangle, sans toucher à la grille ni à la mémoire."
         "Paste and PasteAndFlush follow the Toric ? switch of the edit bar: on, the cells that overflow the grid are folded on the opposite side (coordinates wrapped modulo the width and the height), so Paste(-10, 10, true) brings back on the right what comes out on the left; off, the cells outside the grid are lost." ->
             "Paste et PasteAndFlush suivent l'interrupteur Torique ? de la barre d'édition : actif, les cellules qui débordent de la grille se poursuivent du côté opposé (coordonnées ramenées modulo la largeur et la hauteur), si bien que Paste(-10, 10, true) fait réapparaître à droite ce qui sort à gauche ; inactif, les cellules hors grille sont perdues."
 
@@ -785,24 +787,24 @@ object French: Locale {
             "Au-dessus de la grille, la barre de simulation : retour au début, lecture, pas à pas, arrêt, la vitesse en pas par seconde et le compteur de pas."
         "The explorer" -> "L'explorateur"
         "The left column lists what the model contains: Agents (the grains), Fields and Behaviours, then Simulation modifiers in expert mode." ->
-            "La colonne de gauche liste le contenu du modèle : Agents (les grains), Champs et Comportements, puis Modificateurs de simulation en mode expert."
+            "La colonne de gauche liste le contenu du modèle : Agents, Champs et Comportements, auxquels s'ajoutent les Modificateurs de simulation en mode expert."
         "Each row carries an On/Off radio, a name and its identifier, written name (id): that identifier is what the formulas use. The + of a section adds an element and opens its editor, and the search box above filters the list." ->
-            "Chaque ligne porte une case On/Off, un nom et son identifiant, écrit nom (id) : c'est cet identifiant qu'utilisent les formules. Le + d'une section ajoute un élément et ouvre son éditeur, et la zone de recherche au-dessus filtre la liste."
+            "Chaque ligne porte un bouton de type On/Off contrôlant la visibilité (agents et champs) ou l'activation (comportement et modificateurs), un nom et son identifiant, écrit nom (id) : c'est cet identifiant qu'utilisent les formules. Le + d'une section ajoute un élément et ouvre son éditeur. Notez l'existence d'une zone de recherche au-dessus qui permet de filtrer l'explorateur."
         "The tabs" -> "Les onglets"
         "Simulation holds the grid, the run bar and the edition tools. Model opens the editor of the element selected in the explorer, and Settings holds the size of the grid, the seed, the update plan and the curves." ->
-            "Simulation contient la grille, la barre de simulation et les outils d'édition. Modèle ouvre l'éditeur de l'élément sélectionné dans l'explorateur, et Paramètres contient la taille de la grille, la graine, le plan de mise à jour et les courbes."
+            "Dans cette série d'onglets, Simulation affiche la grille, la barre de simulation et les outils d'édition, Modèle ouvre l'éditeur de l'élément sélectionné dans l'explorateur, et Paramètres permet d'ajuster des éléments relatifs à la simulation comme la taille de la grille, la graine aléatoire, le plan de mise à jour et l'affichage des courbes."
         "The curves" -> "Les courbes"
         "The right column draws one curve per agent: how many there are at each step, in the colour of its grain. The Fields chart below does the same for the amount of each field, and appears as soon as the model has one." ->
-            "La colonne de droite trace une courbe par agent : combien il y en a à chaque pas, dans la couleur de son grain. Le graphique Champs en dessous fait de même pour la quantité de chaque champ, et apparaît dès que le modèle en a un."
+            "La colonne de droite trace une courbe par agent avec sa couleur. Le graphique Champs en dessous fait de même."
         "Both start again at a rewind. The CSV button exports the history, and Settings can show a sliding window instead of the whole run." ->
-            "Les deux repartent de zéro à un retour au début. Le bouton CSV exporte l'historique, et Paramètres peut afficher une fenêtre glissante au lieu de toute la simulation."
+            "Il est possible de faire afficher les courbes selon une fenêtre glissante (voir paramètres). Les boutons CSV exportent l'historique des agents ou des champs."
         "Drawing tools and edit bar" -> "Outils de dessin et barre d'édition"
         "The bar under the grid holds the drawing tools — pen, line, square, circle, spray, eraser and move — with their size, the Fill switch of the square and the circle, the random add and the button that clears the grid." ->
             "La barre sous la grille porte les outils de dessin — crayon, ligne, carré, cercle, pulvérisateur, gomme et déplacement — avec leur taille, l'interrupteur Remplir du carré et du cercle, l'ajout aléatoire et le bouton qui vide la grille."
         "The bar under it copies, cuts, pastes, erases, turns and mirrors a selection of cells; a shift + drag selects a rectangle." ->
             "La barre en dessous copie, coupe, colle, supprime, tourne et retourne une sélection de cellules ; un glissé avec Maj sélectionne un rectangle."
         "The tutorial « Cut, rotate, paste » takes those gestures one by one. This tour stops here." ->
-            "Le tutoriel « Couper, tourner, coller » reprend ces gestes un par un. Ce tour s'arrête ici."
+            "Le tutoriel « Couper, tourner, coller » reprend ces gestes un par un. Ce tour s'achève ici ; merci de l'avoir suivi."
         "That is the whole screen. The other tutorials go further: « Cut, rotate, paste » for the edition, the beginner ones for the agents and the fields, the expert ones for the behaviours, the actions, the modifiers and the formulas." ->
             "C'est tout l'écran. Les autres tutoriels vont plus loin : « Couper, tourner, coller » pour l'édition, ceux de niveau débutant pour les agents et les champs, ceux de niveau expert pour les comportements, les actions, les modificateurs et les formules."
         "Hold Shift and drag on the grid: a rectangle follows the pointer and stays selected when the button is released, with a dark veil and a frame on its cells. That selection is what Copy, Cut and Erase work on." ->
