@@ -9,6 +9,8 @@ import com.centyllion.client.controller.utils.UndoRedoSupport
 import com.centyllion.client.tutorial.ActionsTutorial
 import com.centyllion.client.tutorial.BacteriasTutorial
 import com.centyllion.client.tutorial.DisplayTutorial
+import com.centyllion.client.tutorial.EditSelectionTutorial
+import com.centyllion.client.tutorial.GettingStartedTour
 import com.centyllion.client.tutorial.MetaActionsTutorial
 import com.centyllion.client.tutorial.FieldFormulaTutorial
 import com.centyllion.client.tutorial.FieldTutorial
@@ -167,7 +169,9 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
      * visitor, or the downloads. The control keeps its own state (IndexedDB handle + two strings
      * of localStorage), so the run loop can save a capture without going through this page.
      */
-    private val workFolderController = WorkFolderController(this)
+    val workFolderController = WorkFolderController(this)
+
+    val titleLabel = Label("NetBioDyn", size = Size.Large)
 
     val tutorialControl = Control(Button(
         i18n("Tutorial"), Icon("question-circle"), color = ElementColor.Primary
@@ -206,7 +210,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
             Column(
                 Level(
                     left = listOf(
-                        Label("NetBioDyn", size = Size.Large)
+                        titleLabel
                     ),
                     center = listOf(tools),
                     right = listOf(expertModeSwitch)
@@ -276,6 +280,8 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         val beginner = i18n("Beginner")
         val expert = i18n("Expert")
         val entries: List<Pair<String, Tutorial<ShowPage>>> = listOf(
+            beginner to GettingStartedTour(this),
+            beginner to EditSelectionTutorial(this),
             beginner to BacteriasTutorial(this),
             beginner to FieldTutorial(this),
             expert to GameOfLifeTutorial(this),
