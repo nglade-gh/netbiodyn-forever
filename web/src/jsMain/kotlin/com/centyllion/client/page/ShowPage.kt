@@ -190,7 +190,6 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     val tools = BField(
         galleryControl,
-        workFolderController.control,
         newControl,
         Control(fileInput),
         saveAsControl,
@@ -207,9 +206,11 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
             Column(
                 Level(
                     left = listOf(
-                        Label("NetBioDyn", size = Size.Large)
+                        Label("NetBioDyn", size = Size.Large),
+                        workFolderController.control,
+                        workFolderController.note
                     ),
-                    center = listOf(tools, workFolderController.note),
+                    center = listOf(tools),
                     right = listOf(expertModeSwitch)
                 ),
                 size = ColumnSize.Full
