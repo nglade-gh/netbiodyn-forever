@@ -206,9 +206,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
             Column(
                 Level(
                     left = listOf(
-                        Label("NetBioDyn", size = Size.Large),
-                        workFolderController.control,
-                        workFolderController.note
+                        Label("NetBioDyn", size = Size.Large)
                     ),
                     center = listOf(tools),
                     right = listOf(expertModeSwitch)
@@ -216,7 +214,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
                 size = ColumnSize.Full
             ),
             Column(
-                BField(Control(modelInfoButton)),
+                BField(Control(modelInfoButton), workFolderController.control),
                 Column(modelController, size = ColumnSize.Full),
                 size = ColumnSize.Full
             ),
