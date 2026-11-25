@@ -15,6 +15,7 @@ import com.centyllion.client.tutorial.MetaActionsTutorial
 import com.centyllion.client.tutorial.FieldFormulaTutorial
 import com.centyllion.client.tutorial.FieldTutorial
 import com.centyllion.client.tutorial.GameOfLifeTutorial
+import com.centyllion.client.tutorial.StencilTutorial
 import com.centyllion.client.tutorial.Tutorial
 import com.centyllion.client.tutorial.TutorialLayer
 import com.centyllion.client.capture.WorkFolderController
@@ -310,10 +311,10 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
     }
 
     /**
-     * Tutorial menu: the tour of the first connection and the editing tutorial come first,
-     * then the two beginner tutorials (bacterias, fields) and the expert ones (Game of Life,
-     * actions, field formula). Each tutorial can also be reached from the conclusion of the
-     * previous one.
+     * Tutorial menu: the tour of the first connection, the editing tutorial and the stencil one
+     * come first, then the two beginner tutorials (bacterias, fields) and the expert ones (Game
+     * of Life, actions, field formula). Each tutorial can also be reached from the conclusion of
+     * the previous one.
      */
     fun startTutorial() {
         val beginner = i18n("Beginner")
@@ -321,6 +322,7 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
         val entries: List<Pair<String, Tutorial<ShowPage>>> = listOf(
             beginner to GettingStartedTour(this),
             beginner to EditSelectionTutorial(this),
+            beginner to StencilTutorial(this),
             beginner to BacteriasTutorial(this),
             beginner to FieldTutorial(this),
             expert to GameOfLifeTutorial(this),

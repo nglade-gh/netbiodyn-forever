@@ -751,6 +751,94 @@ object English: Locale {
             "Four levels: META (blue) for an executed meta-action, INFO (green) for a normal event, WARNING (orange) for something to check, ERROR (red) for a failure. The level is written at the beginning of every line, so the colour is never the only signal."
         "The header folds the panel. Folded, it keeps the number of warnings in view; the state is remembered in this browser. The export button writes journal/MODEL__journal.txt in the working folder, or downloads the same text: one line per entry, level, step and message separated by tabulations. The export never empties the journal." ->
             "The header folds the panel. Folded, it keeps the number of warnings in view; the state is remembered in this browser. The export button writes journal/MODEL__journal.txt in the working folder, or downloads the same text: one line per entry, level, step and message separated by tabulations. The export never empties the journal."
+        "Stencil" -> "Stencil"
+        "Stencil (load a pattern)" -> "Stencil (load a pattern)"
+        "Stencil help (formats and paste)" -> "Stencil help (formats and paste)"
+        "Load a stencil" -> "Load a stencil"
+        "Pattern" -> "Pattern"
+        "Matrix" -> "Matrix"
+        "Validate" -> "Validate"
+        "Choose a file" -> "Choose a file"
+        "Paste an RLE pattern, a .cells pattern, a character matrix or a .nbd2 project." ->
+            "Paste an RLE pattern, a .cells pattern, a character matrix or a .nbd2 project."
+        "File loaded: %0. Press Validate to read the pattern." -> "File loaded: %0. Press Validate to read the pattern."
+        "The pattern fills the clipboard and floats under the mouse: click the grid to anchor it, then paste. The Overwrite ? and Toric ? switches of the edit bar keep their usual meaning." ->
+            "The pattern fills the clipboard and floats under the mouse: click the grid to anchor it, then paste. The Overwrite ? and Toric ? switches of the edit bar keep their usual meaning."
+        "The content is empty: paste a pattern or choose a file." -> "The content is empty: paste a pattern or choose a file."
+        "Unrecognized format. Accepted: RLE (header x = 3, y = 3), plain text .cells (lines of . and O), a character matrix (. for an empty cell, 0-9 then a-f for the grains) and a .nbd2 project." ->
+            "Unrecognized format. Accepted: RLE (header x = 3, y = 3), plain text .cells (lines of . and O), a character matrix (. for an empty cell, 0-9 then a-f for the grains) and a .nbd2 project."
+        "The pattern is empty: there is nothing to paste." -> "The pattern is empty: there is nothing to paste."
+        "This project has no populated environment: there is nothing to copy." ->
+            "This project has no populated environment: there is nothing to copy."
+        "The RLE pattern cannot be read." -> "The RLE pattern cannot be read."
+        "The RLE pattern cannot be read at character %0." -> "The RLE pattern cannot be read at character %0."
+        "This file is not a readable NetBioDyn project (.nbd2)." -> "This file is not a readable NetBioDyn project (.nbd2)."
+        "Stencil: %0 cell(s) ignored, unknown grain id(s) %1." -> "Stencil: %0 cell(s) ignored, unknown grain id(s) %1."
+        "Stencil loaded: %0 x %1 cells, in the clipboard. Click the grid to anchor it, then paste." ->
+            "Stencil loaded: %0 x %1 cells, in the clipboard. Click the grid to anchor it, then paste."
+        "Stencil: every cell designates an unknown grain, nothing was loaded." ->
+            "Stencil: every cell designates an unknown grain, nothing was loaded."
+        "Stencil — accepted formats" -> "Stencil — accepted formats"
+        "The format is detected on its own, without a selector. Four formats are accepted; anything else is refused and nothing is loaded." ->
+            "The format is detected on its own, without a selector. Four formats are accepted; anything else is refused and nothing is loaded."
+        "RLE (Golly): a line x = width, y = height, optionally followed by rule = B3/S23, then the cells on the following lines. Lines starting with # are comments, #N naming the pattern. b (or .) is an empty cell and o a live one; a number repeats the symbol that follows, $ ends a row and ! ends the pattern. A body made of b and o only is two-state: o designates the first grain of the model, id 0, exactly like O in a .cells file, so a Game of Life pattern loads in a one-grain model. An uppercase letter introduces a state of its own (A = 10, B = 11 ... Z = 35): the body is then multi-state, 2A is two cells of grain 10, and o is grain 1 again." ->
+            "RLE (Golly): a line x = width, y = height, optionally followed by rule = B3/S23, then the cells on the following lines. Lines starting with # are comments, #N naming the pattern. b (or .) is an empty cell and o a live one; a number repeats the symbol that follows, $ ends a row and ! ends the pattern. A body made of b and o only is two-state: o designates the first grain of the model, id 0, exactly like O in a .cells file, so a Game of Life pattern loads in a one-grain model. An uppercase letter introduces a state of its own (A = 10, B = 11 ... Z = 35): the body is then multi-state, 2A is two cells of grain 10, and o is grain 1 again."
+        "Plain text .cells: one line per row, . for an empty cell and O (or o) for a live one; ! starts a comment and !Name: gives the name of the pattern. The format has two states only, so a live cell designates the first grain of the model, id 0." ->
+            "Plain text .cells: one line per row, . for an empty cell and O (or o) for a live one; ! starts a comment and !Name: gives the name of the pattern. The format has two states only, so a live cell designates the first grain of the model, id 0."
+        "Character matrix: one character per cell, . for an empty cell and 0-9 then a-f (or A-F) for the grains of id 0 to 15; commas, spaces and tabs are ignored, ! and # lines are comments." ->
+            "Character matrix: one character per cell, . for an empty cell and 0-9 then a-f (or A-F) for the grains of id 0 to 15; commas, spaces and tabs are ignored, ! and # lines are comments."
+        ".nbd2 project: the populated environment stored in the file is extracted, with the grain of every cell, and cropped on the bounding box of the agents; the empty border of the grid is dropped." ->
+            ".nbd2 project: the populated environment stored in the file is extracted, with the grain of every cell, and cropped on the bounding box of the agents; the empty border of the grid is dropped."
+        "Grains the model does not have" -> "Grains the model does not have"
+        "A cell designating a grain the model does not have becomes empty, since there is nothing to paste there. The journal reports the number of cells ignored and the ids in cause, once per load; a pattern that loses every cell is not loaded at all." ->
+            "A cell designating a grain the model does not have becomes empty, since there is nothing to paste there. The journal reports the number of cells ignored and the ids in cause, once per load; a pattern that loses every cell is not loaded at all."
+        "Paste and the edit bar" -> "Paste and the edit bar"
+        "The stencil arrives in the clipboard like a copy: it floats under the mouse, is anchored with a left click, turned with Ctrl+R and mirrored with Ctrl+F or Ctrl+Shift+F. The Overwrite ? switch decides whether the paste replaces the agents already there or only fills the empty cells of the pattern; Toric ? decides whether a pattern that overflows the grid wraps on the opposite side. These are the rules of the manual paste, unchanged." ->
+            "The stencil arrives in the clipboard like a copy: it floats under the mouse, is anchored with a left click, turned with Ctrl+R and mirrored with Ctrl+F or Ctrl+Shift+F. The Overwrite ? switch decides whether the paste replaces the agents already there or only fills the empty cells of the pattern; Toric ? decides whether a pattern that overflows the grid wraps on the opposite side. These are the rules of the manual paste, unchanged."
+        // tutorial "Load a stencil": one sentence per step
+        "Open the Stencil window" -> "Open the Stencil window"
+        "The Stencil button, with the stamp icon, sits in the edit bar just after Paste. It opens a window that reads a pattern from a text or from a file and drops it in the clipboard as a floating selection: nothing is written on the grid yet." ->
+            "The Stencil button, with the stamp icon, sits in the edit bar just after Paste. It opens a window that reads a pattern from a text or from a file and drops it in the clipboard as a floating selection: nothing is written on the grid yet."
+        "This tutorial created a one-grain model for itself: a single grain « Cell » of id 0, which already carries the rules of the Game of Life — Birth at exactly 3 neighbours, Death under 2 or over 3. That is the model the two binary formats speak of: a .cells file, and an RLE made of b and o only, designate the first grain." ->
+            "This tutorial created a one-grain model for itself: a single grain « Cell » of id 0, which already carries the rules of the Game of Life — Birth at exactly 3 neighbours, Death under 2 or over 3. That is the model the two binary formats speak of: a .cells file, and an RLE made of b and o only, designate the first grain."
+        "Paste the pattern in the zone" -> "Paste the pattern in the zone"
+        "Select the pattern below, copy it (Ctrl+C), click the text zone of the window and paste it there (Ctrl+V)." ->
+            "Select the pattern below, copy it (Ctrl+C), click the text zone of the window and paste it there (Ctrl+V)."
+        "The lines are long and the message is narrow: the box scrolls on its own. The very same pattern is written in full in the help, §7.5 « Load a stencil », and it is the catereron of the Conway Life wiki, 50P92.1." ->
+            "The lines are long and the message is narrow: the box scrolls on its own. The very same pattern is written in full in the help, §7.5 « Load a stencil », and it is the catereron of the Conway Life wiki, 50P92.1."
+        "Validate reads the zone and closes the window. A text that no format recognises leaves the window open, with a red message saying what is accepted, and loads nothing." ->
+            "Validate reads the zone and closes the window. A text that no format recognises leaves the window open, with a red message saying what is accepted, and loads nothing."
+        "Here the header announces x = 32, y = 45 and the body uses nothing but b and o: this is a two-state RLE, so each o becomes grain 0, the only grain of the model. The journal then writes « Stencil loaded: 32 x 45 cells » — a size or a grain id that does not fit would be reported there as ignored cells." ->
+            "Here the header announces x = 32, y = 45 and the body uses nothing but b and o: this is a two-state RLE, so each o becomes grain 0, the only grain of the model. The journal then writes « Stencil loaded: 32 x 45 cells » — a size or a grain id that does not fit would be reported there as ignored cells."
+        "Anchor the floating selection" -> "Anchor the floating selection"
+        "The pattern now floats under the pointer: a thin cool frame with the ghost of its 66 agents, showing exactly what a paste would write on the cell below." ->
+            "The pattern now floats under the pointer: a thin cool frame with the ghost of its 66 agents, showing exactly what a paste would write on the cell below."
+        "A left click anchors it on that cell: the frame becomes thick and yellow and stops following the pointer. A right click releases it, Ctrl+R turns it, Ctrl+F and Ctrl+Shift+F mirror it." ->
+            "A left click anchors it on that cell: the frame becomes thick and yellow and stops following the pointer. A right click releases it, Ctrl+R turns it, Ctrl+F and Ctrl+Shift+F mirror it."
+        "Paste (Ctrl+V)" -> "Paste (Ctrl+V)"
+        "Ctrl+V, or the Paste button of the edit bar, writes the 66 agents of the pattern where the anchor is. Without an anchor, the paste lands under the pointer or on the corner of the selection." ->
+            "Ctrl+V, or the Paste button of the edit bar, writes the 66 agents of the pattern where the anchor is. Without an anchor, the paste lands under the pointer or on the corner of the selection."
+        "Only the agents of the pattern are written: a cell the pattern leaves empty leaves its target as it is, unless Écraser ? is on — see the next step." ->
+            "Only the agents of the pattern are written: a cell the pattern leaves empty leaves its target as it is, unless Écraser ? is on — see the next step."
+        "Accepted formats, Écraser ? and Torique ?" -> "Accepted formats, Écraser ? and Torique ?"
+        "The format is detected on its own, there is no selector. Four are accepted: RLE of Golly (a header x = …, y = … then the cells), plain text .cells (lines of . and O), a character matrix (one character per cell, 0-9 then a-f for the ids) and a .nbd2 project, cropped on the box of its agents." ->
+            "The format is detected on its own, there is no selector. Four are accepted: RLE of Golly (a header x = …, y = … then the cells), plain text .cells (lines of . and O), a character matrix (one character per cell, 0-9 then a-f for the ids) and a .nbd2 project, cropped on the box of its agents."
+        "How a cell is numbered: a two-state pattern — RLE with b and o only, or .cells — designates grain 0. As soon as an RLE body carries an uppercase state (A = 10, B = 11 … Z = 35), the state number is the grain id, so o is grain 1 again and 2A is two cells of grain 10. A cell whose grain the model does not have becomes empty, and the journal counts it once per load." ->
+            "How a cell is numbered: a two-state pattern — RLE with b and o only, or .cells — designates grain 0. As soon as an RLE body carries an uppercase state (A = 10, B = 11 … Z = 35), the state number is the grain id, so o is grain 1 again and 2A is two cells of grain 10. A cell whose grain the model does not have becomes empty, and the journal counts it once per load."
+        "Écraser ? decides what happens over the agents already there: off, the paste only fills the empty cells of its target; on, the agents of the pattern replace the ones in place, cell by cell. Torique ? decides at the borders: off, the cells that overflow the grid are lost; on, they fold on the opposite side. A stencil follows both, exactly like a manual paste." ->
+            "Écraser ? decides what happens over the agents already there: off, the paste only fills the empty cells of its target; on, the agents of the pattern replace the ones in place, cell by cell. Torique ? decides at the borders: off, the cells that overflow the grid are lost; on, they fold on the opposite side. A stencil follows both, exactly like a manual paste."
+        "The ? button beside Stencil opens the same explanations, and the help (§7.5) holds the table of formats and the complete text of this pattern." ->
+            "The ? button beside Stencil opens the same explanations, and the help (§7.5) holds the table of formats and the complete text of this pattern."
+        "Run it — the creature lives" -> "Run it — the creature lives"
+        "The 66 cells pasted on the grid are agents of the model, and the two behaviours it already had apply to them: Birth where exactly three neighbours surround an empty cell, Death where there are less than two or more than three. Press the play button of the run bar, or the step-forward arrow to go one step at a time." ->
+            "The 66 cells pasted on the grid are agents of the model, and the two behaviours it already had apply to them: Birth where exactly three neighbours surround an empty cell, Death where there are less than two or more than three. Press the play button of the run bar, or the step-forward arrow to go one step at a time."
+        "This pattern is 50P92.1, an oscillator of the Game of Life: it does not stay still, it comes back to its shape every 92 steps. Watch the counter and the curve of the grain: the number of living cells changes from one step to the next." ->
+            "This pattern is 50P92.1, an oscillator of the Game of Life: it does not stay still, it comes back to its shape every 92 steps. Watch the counter and the curve of the grain: the number of living cells changes from one step to the next."
+        "A grid that would not move is the sign of a pattern loaded with a grain the model does not have: nothing was pasted. Rewind brings the model and the grid back to their initial state, and the clipboard is left alone, so the pattern can be pasted again." ->
+            "A grid that would not move is the sign of a pattern loaded with a grain the model does not have: nothing was pasted. Rewind brings the model and the grid back to their initial state, and the clipboard is left alone, so the pattern can be pasted again."
+        "A stencil is a copy that comes from a text: Stencil, paste the pattern, Validate, click the grid to anchor it, Ctrl+V, then press play. Before pasting, check Écraser ? and Torique ? — the stencil obeys them like any other paste, and with Écraser ? on its empty cells erase the ones they cover." ->
+            "A stencil is a copy that comes from a text: Stencil, paste the pattern, Validate, click the grid to anchor it, Ctrl+V, then press play. Before pasting, check Écraser ? and Torique ? — the stencil obeys them like any other paste, and with Écraser ? on its empty cells erase the ones they cover."
+
         else -> key
     }
 }
