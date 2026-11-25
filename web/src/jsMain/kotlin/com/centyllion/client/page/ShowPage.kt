@@ -88,6 +88,12 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
 
     private val undoRedo = UndoRedoSupport(model) { model = it }
 
+    /** Undo button, framed on its own by the tour of the first connection. */
+    val undoButton get() = undoRedo.undoButton
+
+    /** Redo button, framed on its own by the tour of the first connection. */
+    val redoButton get() = undoRedo.redoButton
+
     val modelController = ModelController(this, model) { _, new, _ -> model = new }
 
     init {
@@ -218,7 +224,9 @@ class ShowPage(override val appContext: AppContext) : BulmaPage {
                 size = ColumnSize.Full
             ),
             Column(
-                BField(Control(modelInfoButton), workFolderController.control),
+                // the model information button and the home button of the working folder share
+                // one line: a grouped field lays its controls out in a row
+                BField(Control(modelInfoButton), workFolderController.control, grouped = true),
                 Column(modelController, size = ColumnSize.Full),
                 size = ColumnSize.Full
             ),
