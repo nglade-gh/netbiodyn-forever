@@ -327,5 +327,9 @@ class SimulationSettingsController (
     override fun refresh() {
         colorController.refresh()
         gridTextureUrlController.refresh()
+        // the two inputs only matter in custom mode, and a preset cannot be picked then
+        widthStepper.enabled(customSize && !readOnly)
+        heightStepper.enabled(customSize && !readOnly)
+        sizeController.disabled = customSize || readOnly
     }
 }
