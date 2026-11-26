@@ -145,7 +145,7 @@ class BehaviourEditController(
         initialData = data.formula,
         placeHolder = page.i18n("Predicate (e.g. count(1) > 2 && count(2) == 1)"),
         columns = 40,
-        isValid = { value -> if (value.isBlank()) null else validatePredicateFormula(value) },
+        isValid = { value -> if (value.isBlank()) null else validatePredicateFormula(value, context.grains.mapTo(mutableSetOf()) { it.id }) },
         onUpdate = { _, new, _ ->
             data = data.copy(formula = new)
         }
@@ -256,6 +256,13 @@ class BehaviourEditController(
                 helpLine("field(id)", "Value of field id at the current cell"),
                 helpLine("field(id, dx, dy)", "Value of field id at offset (dx, dy) from the current cell (e.g. 1, 0 = east neighbour)"),
                 helpLine("agent(x, y)", "Agent id at position (x, y), -1 if none"),
+                helpLine("onAgent(id)", "True when at least one of the eight neighbours holds that grain (the cell itself is not counted)"),
+                helpLine("onAgent(id, dx, dy)", "True when the single cell at that offset holds that grain: dx and dy are -1, 0 or 1, (0, 0) being the cell itself"),
+                helpLine("hasAnyOf({ids})", "True when at least one of the listed agent types is present among the eight neighbours (the cell itself is not counted)"),
+                helpLine("hasAllOf({ids})", "True when all the listed agent types are present among the eight neighbours (the cell itself is not counted)"),
+                helpLine("hasOnly({ids})", "True when no agent type other than the listed ones is present among the eight neighbours: the listed ones may be absent or present"),
+                helpLine("hasExactly({ids})", "True when the eight neighbours hold exactly the listed agent types, neither more nor fewer"),
+                helpLine("{0,1,3}", "Agent type list, e.g. {0,1,3}: accepted only as the argument of the four set predicates. The empty list {} is refused and so is an unknown id. At most 30 types (ids 0 to 29)."),
             ),
             fullWidth = true, striped = true
         ),
@@ -285,6 +292,8 @@ class BehaviourEditController(
                 helpLine("count(0) >= 3 && count(0) < 5", "Between 3 and 4 neighbours of agent 0"),
                 helpLine("age(1) >= 10 && count(1) == 0", "Age at least 10 and no neighbour of agent 1"),
                 helpLine("count(0) > 3 && field(1) < 0.5", "At least 4 neighbours of agent 0 and field 1 below 0.5 on the cell"),
+                helpLine("hasAnyOf({0,1}) && step > 3", "At least one agent of type 0 or 1 around the cell, from step 4 on"),
+                helpLine("hasOnly({0}) && count(0) == 3", "No type other than 0 around the cell, and exactly 3 agents of type 0"),
             ),
             fullWidth = true, striped = true
         )
@@ -368,6 +377,17 @@ class BehaviourEditController(
         actionsController.container
     ).apply { hidden = !expertMode }
 
+
+    /**
+     * Contextual help of the reaction lines, including the reactive column: the only place where
+     * "any agent" appears, and why it never appears on the product side.
+     */
+    val reactionsHelp = Section(
+        p(page.i18n("Each line adds a neighbour to the behaviour: the reactive column names the neighbour cell to look at, the directions column the directions where it is looked for, and the product column the agent left in that cell.")),
+        p(page.i18n("The reactive column proposes, in this order: none (an empty neighbour cell, where the product is then created), Any agent (any occupied neighbour cell, whatever its agent, which the product replaces in place), then the agents of the model. The directions, the age source and the product never offer Any agent.")),
+        p(page.i18n("Any agent exists only on the reactive side: it names the neighbour to transform, so a single line covers every species. A product, on the contrary, is always one precise agent: 'any agent' would mean 'any of them at random', which has no meaning in a grid cell.")),
+        p(page.i18n("Age inheritance is unchanged: the source column designates the main agent (1) or the neighbour of a reaction line (2 to N+1), whatever its agent. With Any agent, the inherited age is the one of the neighbour actually chosen.")),
+    )
 
     val mainReactiveController = GrainSelectController(
         context.grainForId(data.mainReactiveId), context.grains, page, allowNone = true
@@ -557,7 +577,11 @@ class BehaviourEditController(
         blockTitle("Reactions"),
         HorizontalField(Label(page.i18n("Speed")), probabilityController.container),
         fieldInfluencesGroup,
-        Label(page.i18n("Reactions")), reactionsController,
+        Level(
+            left = listOf(Label(page.i18n("Reactions"))),
+            right = listOf(helpButton("Reactions", listOf(reactionsHelp)))
+        ),
+        reactionsController,
         actionsLine
     )
 
